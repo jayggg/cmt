@@ -4,11 +4,11 @@
 
 template <class T>
 class App: public ExplicitRK<T, App<T>> {
-  function<void(double, BareVector<T>)> _f;
+  function<void(double, FlatVector<T>)> _f;
 public:
-  App(function<void(double, BareVector<T>)> ff, int s, int n)
+  App(function<void(double, FlatVector<T>)> ff, int s, int n)
     :  ExplicitRK<T, App<T>>(s, n) { _f = ff; }
-  void F(double z, BareVector<T> Y) { return _f(z, Y); }
+  void F(double z, FlatVector<T> Y) { return _f(z, Y); }
 };
 
 
@@ -25,11 +25,11 @@ RunRKTests() {
   Vector<int> stages({1,2,4});
   
   cout << endl << "* Checking scalar case:" << endl;
-  Vector<function<void(double, BareVector<double>)>>
+  Vector<function<void(double, FlatVector<double>)>>
     fun({
-	[](double t, BareVector<double> Y){ Y[0]=1.0;},
-	  [](double t, BareVector<double> Y){ Y[0]=t;},
-	    [](double t, BareVector<double> Y){ Y[0]=t*t*t;}
+	[](double t, FlatVector<double> Y){ Y[0]=1.0;},
+	  [](double t, FlatVector<double> Y){ Y[0]=t;},
+	    [](double t, FlatVector<double> Y){ Y[0]=t*t*t;}
       });
   Vector<> exact({1+tf, 1+0.5*tf*tf, 1+(tf*tf*tf*tf/4.0)});
   Vector<> y({1.0});
@@ -61,10 +61,10 @@ RunRKTests() {
   exactv.Row(1) =  v + 0.5*tf*tf*ones;
   exactv.Row(2) =  v + (tf*tf*tf*tf/4.0)*ones;
   
-  Vector<function<void(double, BareVector<double>)>>
-    vfn({ [&](double t, BareVector<double> Y) {for (int i=0; i<n; i++) Y[i]=1.0;},
-  	  [&](double t, BareVector<double> Y) {for (int i=0; i<n; i++) Y[i]=t;},
-  	  [&](double t, BareVector<double> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t;}
+  Vector<function<void(double, FlatVector<double>)>>
+    vfn({ [&](double t, FlatVector<double> Y) {for (int i=0; i<n; i++) Y[i]=1.0;},
+  	  [&](double t, FlatVector<double> Y) {for (int i=0; i<n; i++) Y[i]=t;},
+  	  [&](double t, FlatVector<double> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t;}
       });
   
   for (int i=0; i<stages.Size(); i++) {
@@ -92,10 +92,10 @@ RunRKTests() {
   exactvc.Row(1) =  vc + 0.5*tf*tf*ones;
   exactvc.Row(2) =  vc + (tf*tf*tf*tf/4.0)*ones;
   
-  Vector<function<void(double, BareVector<Complex>)>>
-    vcfn({[&](double t, BareVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=1.0;},
-  	  [&](double t, BareVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=t;},
-  	  [&](double t, BareVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t;}
+  Vector<function<void(double, FlatVector<Complex>)>>
+    vcfn({[&](double t, FlatVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=1.0;},
+  	  [&](double t, FlatVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=t;},
+  	  [&](double t, FlatVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t;}
       });
   
   for (int i=0; i<stages.Size(); i++) {

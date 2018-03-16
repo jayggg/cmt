@@ -116,7 +116,7 @@ public:
   FromApplication() { return static_cast<APP &>(*this); }
 
   inline void
-  F(double z, BareVector<T> Y) { return FromApplication().F(z, Y); }
+  F(double z, FlatVector<T> Y) { return FromApplication().F(z, Y); }
   
   inline void
   SolveIVP(Vector<T> & Y, double t, double h, int numsteps)  { 
@@ -135,16 +135,19 @@ public:
     // With initial value at time t0 given by input Y.Row(0),
     // solve IVP and output solution in remaining rows of the
     // matrix Y such that  Y.Row(i) = solution at time t + i * h.
-    
+
     _h = h;
     for (int i=0; i<numsteps-1; i++) {
       Y.Row(i+1) = Y.Row(i);
       Step(t0+i*h, Y.Row(i+1));
     }
+
+
   }
 
   void inline 
-  Step(double t, Vector<T> & Y)  {
+  Step(double t, FlatVector<T> Y)  {
+
 
     /* Implement this without creating new memory:
 
@@ -174,6 +177,7 @@ public:
     // y <-  y + h ∑ᵢ bᵢ kᵢ
     for (int i=0; i<_s; i++) 
       Y += _h * (*_B)[i] * _K.Row(i);
+
   }
 
     
