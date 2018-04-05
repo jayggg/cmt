@@ -5,6 +5,9 @@
 using namespace ngsolve;
 #include <python_ngstd.hpp>
 
+#include <iostream>
+#include <cmath>
+#include <cfloat>
 
 
 template <class T, class APP>
@@ -22,6 +25,27 @@ class ExplicitRK {
 	         | B[0]      B[1]      ...  B[s-1]
 
      Reference: https://en.wikipedia.org/wiki/Runge–Kutta_methods.
+
+     To follow this notation, we will set C and B as Vectors, 
+     while A is set to a Table (with first row length 0).
+     An s-stage Runge-Kutta method does the following:
+
+          Y <- Y + h (B₀ K₀ + B₁ K₁ + ... + Bₛ₋₁ Kₛ₋₁),
+       
+       where Kᵢ's are vectors defined by 
+
+       K₀  = F(t, Y)
+       K₁  = F(t + C₁ h, Y + h A₁₀ K₀)
+       K₂  = F(t + C₂ h, Y + h (A₂₀ K₀ + A₂₁ K₁))
+       :
+       :
+       :
+       i.e., we have 
+
+         Kᵢ = F(t + Cᵢ h, Y + h (Aᵢ₀ K₀ + Aᵢ₁ K₁ + ... + Aᵢ,ᵢ₋₁ Kᵢ₋₁)),
+       
+       for i = 0, 1, ..., s-1.
+
   */ 
 
 protected:
@@ -45,8 +69,8 @@ public:
     
     _s = s;
     _h = 0.0;
-    Array<int> rowsizes(_s-1);
-    for (int i=0; i<_s-1; i++) rowsizes[i]=i+1;
+    Array<int> rowsizes(_s);
+    for (int i=0; i<_s; i++) rowsizes[i]=i;
     _A = new Table<double>(rowsizes);
     vector<vector<double>> A;
     
@@ -81,6 +105,7 @@ public:
       A = {{0.5}};
       break;
     }
+      
     case 4: { // RK4 method
 
       /* Butcher Tableau:
@@ -94,7 +119,7 @@ public:
 
        */
 
-      _C = new Vector<>({0.,    1./2., 1./2., 1    });
+      _C = new Vector<>({0.,    1./2., 1./2., 1.   });
       _B = new Vector<>({1./6., 1./3., 1./3., 1./6.});
       A = {{0.5}, 		
 	   {0.0,  0.5},   	
@@ -107,9 +132,9 @@ public:
       break;
     }
 
-    for (int r=0; r < _s-1; r++)
+    for (int r=1; r <_s; r++)
       for (int c=0; c < rowsizes[r]; c++) 
-	(*_A)[r][c] = A[r][c];
+	(*_A)[r][c] = A[r-1][c];
   }
 
   inline APP &
@@ -138,50 +163,57 @@ public:
 
     _h = h;
     for (int i=0; i<numsteps-1; i++) {
+      
       Y.Row(i+1) = Y.Row(i);
+      
       Step(t0+i*h, Y.Row(i+1));
-    }
-
-
+    }    
   }
 
   void inline 
   Step(double t, FlatVector<T> Y)  {
 
-
     /* Implement this without creating new memory:
 
-        ynew = y + h ∑ᵢ bᵢ kᵢ,     where 
+          Y <- Y + h (B₀ K₀ + B₁ K₁ + ... + Bₛ₋₁ Kₛ₋₁),
+       
+       where Kᵢ's are vectors defined by 
 
-        k₀ = f(t, y)
-        k₁ = f(t + c₁ h, y + h a₁₀ k₀)
-        k₂ = f(t + c₂ h, y + h (a₂₀ k₀ + a₂₁ k₁))
-          : 
-          :
-	kᵢ = f(t + cᵢ h, y + h (aᵢ₀ k₀ + aᵢ₁ k₁ + ... + aᵢ,ᵢ₋₁ kᵢ₋₁))
+       K₀  = F(t, Y)
+       K₁  = F(t + C₁ h, Y + h A₁₀ K₀)
+       K₂  = F(t + C₂ h, Y + h (A₂₀ K₀ + A₂₁ K₁))
+       :
+       :
+       
+       i.e., we have 
+
+         Kᵢ = F(t + Cᵢ h, Y + h (Aᵢ₀ K₀ + Aᵢ₁ K₁ + ... + Aᵢ,ᵢ₋₁ Kᵢ₋₁)),
+       
+       for i = 0, 1, ..., s-1.
+
      */
 
-    for (int i=0; i<_s; i++) {
-
-      // _kᵢ <– y
+    for (int i=0; i<_s; i++) {  // K₀, K₁, ..., Kₛ₋₁ will be made here
+      
+      // _Kᵢ <– Y
       _K.Row(i) = Y;
-
-      for (int j=0; j<i; j++)
-	// kᵢ <- h (aᵢ₀ k₀ + aᵢ₁ k₁ + ... + aᵢ,ᵢ₋₁ kᵢ₋₁)
+      
+      for (int j=0; j<i; j++) 
+	// Kᵢ <-  h * (Aᵢ₀ K₀ + Aᵢ₁ K₁ + ... + Aᵢ,ᵢ₋₁ Kᵢ₋₁)
 	_K.Row(i) += _h * (*_A)[i][j] * _K.Row(j);
 
-      // kᵢ <- F(t+cᵢh, kᵢ)
+      // Kᵢ <-  F(t + Cᵢ h, Kᵢ)
       F(t + (*_C)[i]*_h, _K.Row(i));
     }
 
-    // y <-  y + h ∑ᵢ bᵢ kᵢ
+    // Y <-  Y + h ∑ᵢ Bᵢ Kᵢ
     for (int i=0; i<_s; i++) 
       Y += _h * (*_B)[i] * _K.Row(i);
-
   }
-
-    
+  
   void Print() const {
+    cout << "Explicit RK method of " << _s
+	 << " stages with the following Butcher tableau:" << endl;
     cout << "A:" << endl << *_A << endl;
     cout << "B:" << endl << *_B << endl;
     cout << "C:" << endl << *_C << endl;
@@ -195,6 +227,7 @@ public:
   }
   
 };
+
 
 
 
