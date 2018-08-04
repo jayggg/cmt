@@ -22,16 +22,17 @@ RunRKTests() {
   int nsteps = 1000;
   double t = 0.0;
   double tf = t + nsteps * h;
-  Vector<int> stages({1,2,4});
+  Vector<int> stages({1,2,4,7});
   
   cout << endl << "* Checking scalar case:" << endl;
   Vector<function<void(double, FlatVector<double>)>>
     fun({
-	[](double t, FlatVector<double> Y){ Y[0]=1.0;},
-	  [](double t, FlatVector<double> Y){ Y[0]=t;},
-	    [](double t, FlatVector<double> Y){ Y[0]=t*t*t;}
+        [](double t, FlatVector<double> Y){ Y[0]=1.0;},
+        [](double t, FlatVector<double> Y){ Y[0]=t;},
+        [](double t, FlatVector<double> Y){ Y[0]=t*t*t;},
+        [](double t, FlatVector<double> Y){ Y[0]=t*t*t*t;}
       });
-  Vector<> exact({1+tf, 1+0.5*tf*tf, 1+(tf*tf*tf*tf/4.0)});
+  Vector<> exact({1+tf, 1+0.5*tf*tf, 1+(tf*tf*tf*tf/4.0), 1+(tf*tf*tf*tf*tf/5.0)});
   Vector<> y({1.0});
 
   
@@ -40,7 +41,6 @@ RunRKTests() {
     cout << "** Checking stage " << stages[i] << " RK" << endl;
 
     App<double> a(fun[i], stages[i], 1);
-
     a.SolveIVP(y, t, h, nsteps);
     if (abs(y[0] - exact[i]) < 1.e-10)
       cout <<"    Passed!" << endl;
@@ -48,7 +48,7 @@ RunRKTests() {
       success = false;
       cout <<"    Failed!" << endl;
       cout <<"!!! y[0] = " <<  y[0] << " exact = " << exact[i]
-	   << " diff = " << y[0] - exact[i] << endl;
+           << " diff = " << y[0] - exact[i] << endl;
     }
   }
   
@@ -60,11 +60,13 @@ RunRKTests() {
   exactv.Row(0) =  v + tf*ones;
   exactv.Row(1) =  v + 0.5*tf*tf*ones;
   exactv.Row(2) =  v + (tf*tf*tf*tf/4.0)*ones;
+  exactv.Row(3) =  v + (tf*tf*tf*tf*tf/5.0)*ones;
   
   Vector<function<void(double, FlatVector<double>)>>
     vfn({ [&](double t, FlatVector<double> Y) {for (int i=0; i<n; i++) Y[i]=1.0;},
-  	  [&](double t, FlatVector<double> Y) {for (int i=0; i<n; i++) Y[i]=t;},
-  	  [&](double t, FlatVector<double> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t;}
+          [&](double t, FlatVector<double> Y) {for (int i=0; i<n; i++) Y[i]=t;},
+          [&](double t, FlatVector<double> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t;},
+          [&](double t, FlatVector<double> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t*t;}
       });
   
   for (int i=0; i<stages.Size(); i++) {
@@ -80,7 +82,7 @@ RunRKTests() {
       success = false;
       cout <<"    Failed!  diff = " << L2Norm(v - exactv.Row(i))  << endl;
       cout <<"!!! v = " <<  v << endl
-  	   <<"!!! exact = " << exactv.Row(i) << endl;
+           <<"!!! exact = " << exactv.Row(i) << endl;
     }
   }
 
@@ -91,11 +93,13 @@ RunRKTests() {
   exactvc.Row(0) =  vc + tf*ones;
   exactvc.Row(1) =  vc + 0.5*tf*tf*ones;
   exactvc.Row(2) =  vc + (tf*tf*tf*tf/4.0)*ones;
+  exactvc.Row(3) =  vc + (tf*tf*tf*tf*tf/5.0)*ones;
   
   Vector<function<void(double, FlatVector<Complex>)>>
     vcfn({[&](double t, FlatVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=1.0;},
-  	  [&](double t, FlatVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=t;},
-  	  [&](double t, FlatVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t;}
+          [&](double t, FlatVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=t;},
+          [&](double t, FlatVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t;},
+          [&](double t, FlatVector<Complex> Y) {for (int i=0; i<n; i++) Y[i]=t*t*t*t;}
       });
   
   for (int i=0; i<stages.Size(); i++) {
@@ -112,7 +116,7 @@ RunRKTests() {
             success = false;
       cout <<"    Failed!  diff = " << L2Norm(vc - exactvc.Row(i))  << endl;
       cout <<"!!! vc = " <<  vc << endl
-  	   <<"!!! exact = " << exactvc.Row(i) << endl;
+           <<"!!! exact = " << exactvc.Row(i) << endl;
     }
   }
 

@@ -55,8 +55,9 @@ protected:
   int _n;                // number of equations in ODE system
   
   Vector<> * _B;         // Butcher tableau:     C  |  A  
-  Vector<> * _C;	 //                      ---.----- 
-  Table<double>  * _A;	 //                         |  B^T
+  //Vector<> * _B1;        //                      ---.-----  
+  Vector<> * _C;	       //                         |  B^T 
+  Table<double>  * _A;	 //                         |  B1^T
 
 
   Matrix<T> _K;          // Storage for intermediate quantities
@@ -121,9 +122,38 @@ public:
 
       _C = new Vector<>({0.,    1./2., 1./2., 1.   });
       _B = new Vector<>({1./6., 1./3., 1./3., 1./6.});
-      A = {{0.5}, 		
-	   {0.0,  0.5},   	
-	   {0.0,  0.0,   1.0}};
+      A = {{0.5},
+           {0.0,  0.5},
+           {0.0,  0.0,   1.0}};
+      break;
+    }
+
+    case 7: { // Dormand-Prince method
+
+      /* Butcher Tableau:
+
+   0    |
+   1/5  | 1/5
+   3/10 | 3/40       9/40
+   4/5  | 44/45      -56/15      32/9    
+   8/9  | 19372/6561 -25360/2187 6448/6561  -212/729
+   1    | 9017/3168  -355/33     46732/5247 49/176   -5103/18656
+   1    | 35/384     0           500/1113   125/192  -2187/6784    11/84
+   ----------------------------------------------------------------------------
+        | 35/384     0           500/1113   125/192  -2187/6784    11/84    0
+        | 5179/57600 0           7571/16695 393/640  -92097/339200 187/2100 1/40
+
+       */
+
+      _C = new Vector<>({0.           , 1./5.   , 3./10.      , 4./5.    , 8./9.          , 1.        , 1.     });
+      _B = new Vector<>({35./384.     , 0.      , 500./1113.  , 125./192., -2187./6784.   , 11./84.   , 0.     });
+      //_B1 = new Vector<>({5179./57600., 0.      , 7571./16695., 393./640., -92097./339200., 187./2100., 1./40. });
+      A = {{1./5. },
+           {3./40.      , 9./40.       },
+           {44./45.     , -56./15.     , 32./9.     },
+           {19372./6561., -25360./2187., 6448./6561. , -212./729. },
+           {9017./3168. , -355./33.    , 46732./5247., 49./176.    , -5103./18656. },
+           {35./384.    , 0.           , 500./1113.  , 124./192.   , -2187./6784.   , 11./84}};
       break;
     }
       
@@ -134,7 +164,7 @@ public:
 
     for (int r=1; r <_s; r++)
       for (int c=0; c < rowsizes[r]; c++) 
-	(*_A)[r][c] = A[r-1][c];
+        (*_A)[r][c] = A[r-1][c];
   }
 
   inline APP &
@@ -165,7 +195,6 @@ public:
     for (int i=0; i<numsteps-1; i++) {
       
       Y.Row(i+1) = Y.Row(i);
-      
       Step(t0+i*h, Y.Row(i+1));
     }    
   }
@@ -199,8 +228,8 @@ public:
       _K.Row(i) = Y;
       
       for (int j=0; j<i; j++) 
-	// Kᵢ <-  h * (Aᵢ₀ K₀ + Aᵢ₁ K₁ + ... + Aᵢ,ᵢ₋₁ Kᵢ₋₁)
-	_K.Row(i) += _h * (*_A)[i][j] * _K.Row(j);
+        // Kᵢ <-  h * (Aᵢ₀ K₀ + Aᵢ₁ K₁ + ... + Aᵢ,ᵢ₋₁ Kᵢ₋₁)
+        _K.Row(i) += _h * (*_A)[i][j] * _K.Row(j);
 
       // Kᵢ <-  F(t + Cᵢ h, Kᵢ)
       F(t + (*_C)[i]*_h, _K.Row(i));
@@ -213,12 +242,12 @@ public:
   
   void Print() const {
     cout << "Explicit RK method of " << _s
-	 << " stages with the following Butcher tableau:" << endl;
+         << " stages with the following Butcher tableau:" << endl;
     cout << "A:" << endl << *_A << endl;
     cout << "B:" << endl << *_B << endl;
     cout << "C:" << endl << *_C << endl;
   }
-  
+
   ~ExplicitRK() {
 
     delete _A;
