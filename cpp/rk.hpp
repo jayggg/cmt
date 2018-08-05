@@ -56,7 +56,7 @@ protected:
   
   Vector<> * _B;         // Butcher tableau:     C  |  A  
                          //                      ---.-----  
-  Vector<> * _C;	       //                         |  B^T 
+  Vector<> * _C;	 //                         |  B^T 
   Table<double>  * _A;
 
 
@@ -111,7 +111,7 @@ public:
 
       /* Butcher Tableau:
 
-    	 0   |
+    	     0   |
 	     1/2 |	1/2
 	     1/2 |	0	1/2
 	     1   |	0	0	1    

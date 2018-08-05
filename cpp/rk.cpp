@@ -18,6 +18,7 @@ bool
 RunRKTests() {
 
   bool success = true;
+  double tol = 1.e-9;   // this is our machine epsilon for tests
   double h = 0.01;
   int nsteps = 1000;
   double t = 0.0;
@@ -42,11 +43,11 @@ RunRKTests() {
 
     App<double> a(fun[i], stages[i], 1);
     a.SolveIVP(y, t, h, nsteps);
-    if (abs(y[0] - exact[i]) < 1.e-10)
-      cout <<"    Passed!" << endl;
+    if (abs(y[0] - exact[i]) < tol)  
+      cout <<"    Passed.  diff = " << y[0] - exact[i] << endl;	 
     else {
       success = false;
-      cout <<"    Failed!" << endl;
+      cout <<"    *** FAILED!" << endl;
       cout <<"!!! y[0] = " <<  y[0] << " exact = " << exact[i]
            << " diff = " << y[0] - exact[i] << endl;
     }
@@ -76,11 +77,11 @@ RunRKTests() {
     App<double> av(vfn[i], stages[i], n);    
     av.SolveIVP(v, t, h, nsteps);
     
-    if (L2Norm(v - exactv.Row(i)) < 1.e-10)
-      cout <<"    Passed!" << endl;
+    if (L2Norm(v - exactv.Row(i)) < tol)
+      cout <<"    Passed.  diff = " << L2Norm(v - exactv.Row(i))  << endl;
     else {
       success = false;
-      cout <<"    Failed!  diff = " << L2Norm(v - exactv.Row(i))  << endl;
+      cout <<"    *** FAILED!  diff = " << L2Norm(v - exactv.Row(i))  << endl;
       cout <<"!!! v = " <<  v << endl
            <<"!!! exact = " << exactv.Row(i) << endl;
     }
@@ -110,11 +111,11 @@ RunRKTests() {
     App<Complex> avc(vcfn[i], stages[i], n);    
     avc.SolveIVP(vc, t, h, nsteps);
 
-    if (L2Norm(vc - exactvc.Row(i)) < 1.e-10)
-      cout <<"    Passed!" << endl;
+    if (L2Norm(vc - exactvc.Row(i)) < tol)
+      cout <<"    Passed.  diff = " << L2Norm(vc - exactvc.Row(i))  << endl;
     else {
-            success = false;
-      cout <<"    Failed!  diff = " << L2Norm(vc - exactvc.Row(i))  << endl;
+      success = false;
+      cout <<"    *** FAILED!  diff = " << L2Norm(vc - exactvc.Row(i))  << endl;
       cout <<"!!! vc = " <<  vc << endl
            <<"!!! exact = " << exactvc.Row(i) << endl;
     }
