@@ -13,7 +13,9 @@ using namespace ngsolve;
 template <class T, class APP>
 class ExplicitRK {
 
-  /* Explicit RK methods have C[0] = 0 and lower triangular A:
+  /* This class implements some explicit Runge-Kutta methods for
+     solving an ODE system (IVP). These methods have a Butcher tableau
+     with C[0] = 0 and lower triangular A: 
 
             0    |
 	   C[1]  | A[1,0]
@@ -21,7 +23,7 @@ class ExplicitRK {
 	    :    | :
 	    :    | :
 	  C[s-1] | A[s-1,0]  A[s-1,1]  ...  A[s-1, s-2]
-	  ----------------------------------------------
+	  -------|--------------------------------------
 	         | B[0]      B[1]      ...  B[s-1]
 
      Reference: https://en.wikipedia.org/wiki/Runge–Kutta_methods.
@@ -50,17 +52,61 @@ class ExplicitRK {
 
 protected:
 
-  double _h;             // step size
   int _s;                // number of stages
   int _n;                // number of equations in ODE system
+  double _h;             // step size
 
   Vector<> * _B;         // Butcher tableau:     C  |  A
                          //                      ---.-----
   Vector<> * _C;	 //                         |  B^T
   Table<double>  * _A;
 
+  Matrix<T> _K;          // Workspace for intermediate quantities
 
-  Matrix<T> _K;          // Storage for intermediate quantities
+  
+  void inline
+  Step(double t, FlatVector<T> Y)  {
+
+    /* Do one RK step with private step size _h (not given as input; see below
+       for public member functions that take step size as input).
+
+       Specifically, we implement the formula
+
+       Y <- Y + h (B₀ K₀ + B₁ K₁ + ... + Bₛ₋₁ Kₛ₋₁),
+
+       where Kᵢ's are vectors defined by
+
+       K₀  = F(t, Y)
+       K₁  = F(t + C₁ h, Y + h A₁₀ K₀)
+       K₂  = F(t + C₂ h, Y + h (A₂₀ K₀ + A₂₁ K₁))
+       :
+       :
+
+       i.e., we have
+
+       Kᵢ = F(t + Cᵢ h, Y + h (Aᵢ₀ K₀ + Aᵢ₁ K₁ + ... + Aᵢ,ᵢ₋₁ Kᵢ₋₁)),
+
+       for i = 0, 1, ..., s-1. We implement this using the workspace
+       member _K thus avoiding new memory allocation.
+    */
+
+    for (int i=0; i<_s; i++) {  // K₀, K₁, ..., Kₛ₋₁ will be made here
+
+      // _Kᵢ <– Y
+      _K.Row(i) = Y;
+
+      for (int j=0; j<i; j++)
+        // Kᵢ <-  h * (Aᵢ₀ K₀ + Aᵢ₁ K₁ + ... + Aᵢ,ᵢ₋₁ Kᵢ₋₁)
+        _K.Row(i) += _h * (*_A)[i][j] * _K.Row(j);
+
+      // Kᵢ <-  F(t + Cᵢ h, Kᵢ)
+      F(t + (*_C)[i]*_h, _K.Row(i));
+    }
+
+    // Y <-  Y + h ∑ᵢ Bᵢ Kᵢ
+    for (int i=0; i<_s; i++)
+      Y += _h * (*_B)[i] * _K.Row(i);
+  }
 
 public:
 
@@ -183,7 +229,7 @@ public:
   }
 
   inline void
-  SolveIVP(Matrix<T> & Y, double t0, double h, int numsteps)  {
+  SolveFlow(Matrix<T> & Y, double t0, double h, int numsteps)  {
 
     // With initial value at time t0 given by input Y.Row(0),
     // solve IVP and output solution in remaining rows of the
@@ -197,48 +243,6 @@ public:
 
       Step(t0+i*h, Y.Row(i+1));
     }
-  }
-
-  void inline
-  Step(double t, FlatVector<T> Y)  {
-
-    /* Implement this without creating new memory:
-
-          Y <- Y + h (B₀ K₀ + B₁ K₁ + ... + Bₛ₋₁ Kₛ₋₁),
-
-       where Kᵢ's are vectors defined by
-
-       K₀  = F(t, Y)
-       K₁  = F(t + C₁ h, Y + h A₁₀ K₀)
-       K₂  = F(t + C₂ h, Y + h (A₂₀ K₀ + A₂₁ K₁))
-       :
-       :
-
-       i.e., we have
-
-         Kᵢ = F(t + Cᵢ h, Y + h (Aᵢ₀ K₀ + Aᵢ₁ K₁ + ... + Aᵢ,ᵢ₋₁ Kᵢ₋₁)),
-
-       for i = 0, 1, ..., s-1.
-
-     */
-
-    for (int i=0; i<_s; i++) {  // K₀, K₁, ..., Kₛ₋₁ will be made here
-
-      // _Kᵢ <– Y
-      _K.Row(i) = Y;
-
-      for (int j=0; j<i; j++)
-        // Kᵢ <-  h * (Aᵢ₀ K₀ + Aᵢ₁ K₁ + ... + Aᵢ,ᵢ₋₁ Kᵢ₋₁)
-        _K.Row(i) += _h * (*_A)[i][j] * _K.Row(j);
-
-      // Kᵢ <-  F(t + Cᵢ h, Kᵢ)
-      F(t + (*_C)[i]*_h, _K.Row(i));
-
-    }
-
-    // Y <-  Y + h ∑ᵢ Bᵢ Kᵢ
-    for (int i=0; i<_s; i++)
-      Y += _h * (*_B)[i] * _K.Row(i);
   }
 
   void Print() const {
@@ -259,8 +263,30 @@ public:
 };
 
 
+// A simple application class  (used in rk_tests)
+
+template <class T>
+class App: public ExplicitRK<T, App<T>> {
+
+  function<void(double, FlatVector<T>)> _f;
+
+public:
+
+  App(function<void(double, FlatVector<T>)> ff, int s, int n)
+    :  ExplicitRK<T, App<T>>(s, n) { _f = ff; }
+  
+  inline void F(double z, FlatVector<T> Y) { return _f(z, Y); }
+
+};
 
 
+// Explicit instantiation for complex vector ODE systems
+
+template class App<Complex>;
+typedef App<Complex> RKC;
+
+
+// See rk_tests
 extern bool RunRKTests();
 
 #endif // FILE_RK

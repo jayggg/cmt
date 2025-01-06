@@ -1,18 +1,6 @@
 #include "rk.hpp"
 
-// Make a simple application class for testing
-
-template <class T>
-class App: public ExplicitRK<T, App<T>> {
-  function<void(double, FlatVector<T>)> _f;
-public:
-  App(function<void(double, FlatVector<T>)> ff, int s, int n)
-    :  ExplicitRK<T, App<T>>(s, n) { _f = ff; }
-  void F(double z, FlatVector<T> Y) { return _f(z, Y); }
-};
-
-
-// Test function
+// Test functions for the Runge-Kutta solver
 
 bool
 RunRKTests() {
